@@ -20,7 +20,7 @@ pd.options.display.max_columns = 10
 
 
 def convert_dict_dtype_to_float(
-        input_data_dict: pd.DataFrame,
+        input_data_dict: dict,
         columns_to_convert: List[str]
         ) -> dict:
     """
@@ -52,7 +52,7 @@ def has_delinquency_last_30_days(
     (containing the key 'delinquencies30Days')
 
     Args:
-      customer_data_dct (dict): Customer data dictionary containing the keys 'delinquencies30Days'
+      customer_data_dct (dict): Customer data dictionary containing the key 'delinquencies30Days'
 
     Returns:
       bool: Flag for if delinquencies in last 30 days or not
@@ -65,14 +65,14 @@ def has_delinquency_last_30_days(
     return result
 
 
-def return_is_customer_less_than_18_years(
+def is_under_18_years(
         customer_identity_data_dct: dict
         ) -> bool:
     """
     Function to return if customer (on today's date) is less than 18 years
 
     Args:
-        customer_identity_data_dct:
+        customer_identity_data_dct: Customer identity data dictionary containing the key 'date_of_birth'
 
     Returns:
         bool: Flag to show if customer is younger than 18 years old
@@ -88,6 +88,9 @@ def return_is_customer_less_than_18_years(
     total_days_in_year = 365.25  # account for leap years
     age_today_in_years = (today_date - datetime_date_of_birth).days / total_days_in_year
 
+    # On purpose I have not set a variable age as a parameter for the
+    # function, as it's unlikely that the threshold age might be 16
+    # or 21. but this could be the case and the code can be easily adapted
     result = True if age_today_in_years < 18 else False
 
     return result
@@ -110,6 +113,28 @@ def has_failed_credit_score(
     credit_score_value = float(customer_data_risk_model_dct[0]['credit_score'])
 
     result = True if credit_score_value < threshold_score_for_pass else False
+
+    return result
+
+
+def is_risk_score_below_threshold(
+    customer_data_dct: dict,
+    threshold_risk_score: float = 450
+        ) -> bool:
+    """
+    Function to return if customer internal risk score is below threshold
+
+    Args:
+        customer_data_dct (dict): Customer data dictionary containing the key 'NB36_risk_score'
+        threshold_risk_score (float): Threshold risk score below which a customer fails
+
+    Returns:
+        bool: Flag to show if customer fails internal risk score assessment
+    """
+
+    customer_internal_risk_score = float(customer_data_dct['NB36_risk_score'])
+
+    result = True if customer_internal_risk_score < threshold_risk_score else False
 
     return result
 
@@ -300,7 +325,7 @@ if __name__ == '__main___':
     # Rule 2: IF age < 18 THEN FAIL
     # -------------
     customer_identity_data = customer_data['credit_bureau_report']['consumerIdentity']
-    customer_age_check = return_is_customer_less_than_18_years(customer_identity_data_dct=customer_identity_data)
+    customer_age_check = is_under_18_years(customer_identity_data_dct=customer_identity_data)
     customer_data['flag_checks']['age_less_than_18'] = customer_age_check
 
     # Rule 3: IF credit_score < 500 THEN FAIL
@@ -309,3 +334,16 @@ if __name__ == '__main___':
         customer_data_risk_model_dct=customer_data['credit_bureau_report']['riskModel']
         )
     customer_data['flag_checks']['credit_score_less_than_500'] = credit_score_result
+
+
+    # Rule 4: IF internal_risk_score < 450 THEN FAIL
+    # -------------
+    risk_score_result = is_risk_score_below_threshold(
+        customer_data_dct=customer_data
+        )
+    customer_data['flag_checks']['internal_risk_score_less_than_450'] = risk_score_result
+
+    # Rule 5
+    # -----------
+    # If any of the above are False (for failed checks, then return reject), else
+    def return_
