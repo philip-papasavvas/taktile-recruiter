@@ -1,0 +1,14 @@
+Questions on the sample data provided:
+For credit bureau reports samples
+(credit_bureau_report and credit_bureau_report2), should the value for
+the key 'riskModel' be a dict (consistent with
+the other keys: 'tradeline', 'consumerIdentity') rather than a list of a dict?
+e.g. 'riskModel': [{'credit_score': '0787'}].
+
+If so, this would ensure consistency with the other key, value pairs ('tradeline', 'consumerIdentity')
+in the credit_bureau_report samples.
+Furthermore, using an integer slicing
+technique to extract the values of a key seems prone to error/ordering
+of the items (in this case there is only one list value, but this 'riskModel'
+key could have more detailed information in future).
+
