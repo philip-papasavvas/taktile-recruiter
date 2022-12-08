@@ -16,9 +16,10 @@ pd.options.display.width = 1000
 pd.options.display.max_columns = 10
 
 
-# setup decision flow
 
+# ----------
 # sample data
+# ----------
 credit_bureau_report = {
     "consumerIdentity": {
       "name": [
@@ -87,7 +88,6 @@ credit_bureau_report = {
       }
     ]
 }
-
 credit_bureau_report2 = {
     "consumerIdentity": {
       "name": [
@@ -155,6 +155,13 @@ credit_bureau_report2 = {
     ]
 }
 
+example_payload = {
+  "application_id": 123456,
+  "credit_bureau_report": {},
+  "NB36_risk_score": 600,
+}
+
+
 # view the data
 pp = pprint.PrettyPrinter(indent=4)
 pp.pprint(credit_bureau_report)
@@ -169,27 +176,6 @@ pd.DataFrame(customer_data['tradeline'])
 tradeline_columns_to_convert_to_float = [
   'amount1', 'amount2', 'balanceAmount', 'delinquencies30Days'
 ]
-
-input_data_dict = customer_data['tradeline']
-columns_to_convert = tradeline_columns_to_convert_to_float
-from typing import List
-def convert_dict_dtype_to_float(input_data_dict: pd.DataFrame,
-                                columns_to_convert: List[str]) -> dict:
-  """Helper function to convert specified column into float data type"""
-  out_data_df = pd.DataFrame(input_data_dict).copy()
-
-  for col in columns_to_convert:
-    out_data_df[col] = pd.to_numeric(out_data_df[col])
-
-   out_data_dict = out_data_df.to_dict()
-
-  return out_data_dict
-
-
-out_tradeline_dct = convert_dict_dtype_to_float(
-  input_data_dict=customer_data['tradeline'],
-  columns_to_convert=tradeline_columns_to_convert_to_float
-)
 
 # ------
 # Rules
