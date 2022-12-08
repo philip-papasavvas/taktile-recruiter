@@ -6,7 +6,7 @@ Taktile Neobank NB36 take home test - exploratory data analysis
 Submission includes
 - Jupyter notebook
 - Response to Head of Credit
-- Documentation with follow up questions
+- Documentation with follow-up questions
 """
 # built in imports
 import datetime
@@ -22,13 +22,17 @@ pd.options.display.max_columns = 10
 def convert_dict_dtype_to_float(
         input_data_dict: pd.DataFrame,
         columns_to_convert: List[str]
-) -> dict:
+        ) -> dict:
     """
     Helper function to convert specified column into float data type
 
     Args:
         input_data_dict: In the format provided in the sample data parsed from e-mail attachments
         columns_to_convert: A list of columns to convert to numeric type (float)
+
+    Returns:
+        dict: Same format as the input dictionary, but the specified columns
+        for conversion have numeric/float data type
     """
     out_data_df = pd.DataFrame(input_data_dict).copy()
 
@@ -42,31 +46,28 @@ def convert_dict_dtype_to_float(
 
 def has_delinquency_last_30_days(
         customer_data_dct: dict
-) -> bool:
+        ) -> bool:
     """
-  Helper function to return if a customer has delinquencies in last 30 days
-  (containing the key 'delinquencies30Days')
+    Helper function to return if a customer has delinquencies in last 30 days
+    (containing the key 'delinquencies30Days')
 
-  Args:
+    Args:
       customer_data_dct (dict): Customer data dictionary containing the keys 'delinquencies30Days'
 
-  Returns:
+    Returns:
       bool: Flag for if delinquencies in last 30 days or not
-  """
+    """
     # setup error handling if it has negative delinquencies, either throw an error in the program
     # and stop immediately, or smooth this and set negative values to NaN
 
-    if sum(customer_data_dct['delinquencies30Days'].values()) > 0:
-        result = True
-    else:
-        result = False
+    result = True if sum(customer_data_dct['delinquencies30Days'].values()) > 0 else False
 
     return result
 
 
 def return_is_customer_less_than_18_years(
         customer_identity_data_dct: dict
-) -> bool:
+        ) -> bool:
     """
     Function to return if customer (on today's date) is less than 18 years
 
@@ -82,12 +83,33 @@ def return_is_customer_less_than_18_years(
         year=date_of_birth_dict['year'],
         month=date_of_birth_dict['month'],
         day=date_of_birth_dict['day'],
-    )
+        )
     # this gives a time delta in days - convert to years
     total_days_in_year = 365.25  # account for leap years
     age_today_in_years = (today_date - datetime_date_of_birth).days / total_days_in_year
 
     result = True if age_today_in_years < 18 else False
+
+    return result
+
+
+def has_failed_credit_score(
+        customer_data_risk_model_dct: dict,
+        threshold_score_for_pass: int = 500
+        ) -> bool:
+    """
+    Helper function to convert specified column into float data type
+
+    Args:
+        customer_data_risk_model_dct (dict): Customer data dictionary containing the keys 'delinquencies30Days'
+        threshold_score_for_pass (int): Threshold score for pass on credit score
+
+    Returns:
+        bool: Flag for if pass on credit score
+    """
+    credit_score_value = float(customer_data_risk_model_dct[0]['credit_score'])
+
+    result = True if credit_score_value < threshold_score_for_pass else False
 
     return result
 
@@ -103,19 +125,19 @@ if __name__ == '__main___':
                     "firstName": "LUKE",
                     "middleName": "PAUL",
                     "surname": "DUVERGER"
-                }
-            ],
+                    }
+                ],
             "date_of_birth": {
                 "day": 23,
                 "month": 11,
                 "year": 1964
-            }
-        },
+                }
+            },
         "riskModel": [
             {
                 "credit_score": "0787"
-            }
-        ],
+                }
+            ],
         "tradeline": [
             {
                 "accountType": "07",
@@ -129,7 +151,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "C"
-            },
+                },
             {
                 "accountType": "07",
                 "amount1": "00000500",
@@ -141,7 +163,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            },
+                },
             {
                 "accountType": "26",
                 "amount1": "00088600",
@@ -151,7 +173,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            },
+                },
             {
                 "accountType": "19",
                 "amount1": "00029650",
@@ -161,9 +183,9 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            }
-        ]
-    }
+                }
+            ]
+        }
     credit_bureau_report_sample_two = {
         "consumerIdentity": {
             "name": [
@@ -171,19 +193,19 @@ if __name__ == '__main___':
                     "firstName": "LAILA",
                     "middleName": "",
                     "surname": "MUELLER"
-                }
-            ],
+                    }
+                ],
             "date_of_birth": {
                 "day": 23,
                 "month": 11,
                 "year": 1964
-            }
-        },
+                }
+            },
         "riskModel": [
             {
                 "credit_score": "0832"
-            }
-        ],
+                }
+            ],
         "tradeline": [
             {
                 "accountType": "07",
@@ -197,7 +219,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "C"
-            },
+                },
             {
                 "accountType": "07",
                 "amount1": "00000500",
@@ -209,7 +231,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            },
+                },
             {
                 "accountType": "26",
                 "amount1": "00088600",
@@ -218,7 +240,7 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            },
+                },
             {
                 "accountType": "19",
                 "amount1": "00029650",
@@ -227,15 +249,15 @@ if __name__ == '__main___':
                 "delinquencies60Days": "00",
                 "delinquencies90to180Days": "00",
                 "openOrClosed": "O"
-            }
-        ]
-    }
+                }
+            ]
+        }
 
     example_payload = {
         "application_id": 123456,
         "credit_bureau_report": {},
         "NB36_risk_score": 600,
-    }
+        }
 
     # create a dict for the customer flag check results
     customer_flag_check_results = {
@@ -243,7 +265,7 @@ if __name__ == '__main___':
         'age_less_than_18': None,
         'credit_score_less_than_500': None,
         'internal_risk_score_less_than_450': None,
-    }
+        }
 
     # create a dummy for customer data
     customer_data = example_payload
@@ -256,7 +278,7 @@ if __name__ == '__main___':
     # define parameters
     tradeline_columns_to_convert_to_float = [
         'amount1', 'amount2', 'balanceAmount', 'delinquencies30Days'
-    ]
+        ]
 
     # --------
     # decision flow
@@ -268,14 +290,22 @@ if __name__ == '__main___':
     customer_data['credit_bureau_report']['tradeline'] = convert_dict_dtype_to_float(
         input_data_dict=customer_data['credit_bureau_report']['tradeline'],
         columns_to_convert=tradeline_columns_to_convert_to_float
-    )
+        )
 
     delinquency_result = has_delinquency_last_30_days(
         customer_data_dct=customer_data['credit_bureau_report']['tradeline']
-    )
+        )
     customer_data['flag_checks']['has_delinquency_last_30_days'] = delinquency_result
 
-    # IF age < 18 THEN FAIL
+    # Rule 2: IF age < 18 THEN FAIL
+    # -------------
     customer_identity_data = customer_data['credit_bureau_report']['consumerIdentity']
     customer_age_check = return_is_customer_less_than_18_years(customer_identity_data_dct=customer_identity_data)
     customer_data['flag_checks']['age_less_than_18'] = customer_age_check
+
+    # Rule 3: IF credit_score < 500 THEN FAIL
+    # -------------
+    credit_score_result = has_failed_credit_score(
+        customer_data_risk_model_dct=customer_data['credit_bureau_report']['riskModel']
+        )
+    customer_data['flag_checks']['credit_score_less_than_500'] = credit_score_result
