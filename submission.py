@@ -165,7 +165,7 @@ def return_knockout_result(
         customer_data_dct['knockout_result'] = 'REJECT'
         for fail_num in flag_check_failure:
             print(
-                f"Check for: {list(customer_data_dct['flag_checks'])[fail_num]} FAILED."
+                f"Check for: {list(customer_data_dct['flag_checks'])[fail_num]} FAILED. "
                 f"Value was {list(customer_data_dct['check_outcome'].values())[fail_num]}"
                 )
     else:
@@ -282,6 +282,7 @@ def add_extra_keys_to_customer_data_dct(
     customer_data_dct['limit'] = None
 
     return customer_data_dct
+
 
 def run_customer_credit_check(
         customer_data_dict: dict
@@ -518,9 +519,29 @@ if __name__ == '__main___':
         }
 
     # create a dummy for customer data
-    customer_data = example_payload
-    customer_data['credit_bureau_report'] = credit_bureau_report_sample_one
 
-    credit_limit = run_customer_credit_check(
-        customer_data_dict=customer_data
+    # example run - one
+    customer_data_one = example_payload
+    customer_data_one['credit_bureau_report'] = credit_bureau_report_sample_one
+
+    credit_limit_one = run_customer_credit_check(
+        customer_data_dict=customer_data_one
         )
+
+    # example run - two
+    customer_data_two = customer_data_one.copy()
+    customer_data_two['NB36_risk_score'] = 800
+
+    credit_limit_two = run_customer_credit_check(
+        customer_data_dict=customer_data_two
+        )
+
+    # example run - three
+    customer_data_three = customer_data_one.copy()
+    customer_data_three['credit_bureau_report']['riskModel'][0]['credit_score'] = 200
+
+    credit_limit_three = run_customer_credit_check(
+        customer_data_dict=customer_data_three
+        )
+
+
