@@ -10,7 +10,7 @@ Submission includes
 """
 # built in imports
 import datetime
-from typing import List
+from typing import List, Tuple
 
 # third party imports
 import pandas as pd
@@ -46,7 +46,7 @@ def convert_dict_dtype_to_float(
 
 def has_delinquency_last_30_days(
         customer_data_dct: dict
-        ) -> bool:
+        ) -> Tuple[bool, float]:
     """
     Helper function to return if a customer has delinquencies in last 30 days
     (containing the key 'delinquencies30Days')
@@ -60,14 +60,15 @@ def has_delinquency_last_30_days(
     # setup error handling if it has negative delinquencies, either throw an error in the program
     # and stop immediately, or smooth this and set negative values to NaN
 
-    result = True if sum(customer_data_dct['delinquencies30Days'].values()) > 0 else False
+    total_delinq_30d = sum(customer_data_dct['delinquencies30Days'].values())
+    result = True if total_delinq_30d > 0 else False
 
-    return result
+    return result, total_delinq_30d
 
 
 def is_under_18_years(
         customer_identity_data_dct: dict
-        ) -> bool:
+        ) -> Tuple[bool, int]:
     """
     Function to return if customer (on today's date) is less than 18 years
 
@@ -76,6 +77,7 @@ def is_under_18_years(
 
     Returns:
         bool: Flag to show if customer is younger than 18 years old
+        int: Customer age
     """
     today_date = datetime.date.today()
     date_of_birth_dict = customer_identity_data_dct['date_of_birth']
@@ -93,13 +95,13 @@ def is_under_18_years(
     # or 21. but this could be the case and the code can be easily adapted
     result = True if age_today_in_years < 18 else False
 
-    return result
+    return result, int(age_today_in_years)
 
 
 def has_failed_credit_score(
         customer_data_risk_model_dct: dict,
         threshold_score_for_pass: int = 500
-        ) -> bool:
+        ) -> Tuple[bool, float]:
     """
     Helper function to convert specified column into float data type
 
@@ -109,17 +111,18 @@ def has_failed_credit_score(
 
     Returns:
         bool: Flag for if pass on credit score
+        float: Customer credit score value
     """
     credit_score_value = float(customer_data_risk_model_dct[0]['credit_score'])
 
     result = True if credit_score_value < threshold_score_for_pass else False
 
-    return result
+    return result, credit_score_value
 
 
 def is_risk_score_below_threshold(
-    customer_data_dct: dict,
-    threshold_risk_score: float = 450
+        customer_data_dct: dict,
+        threshold_risk_score: float = 450
         ) -> bool:
     """
     Function to return if customer internal risk score is below threshold
@@ -130,13 +133,127 @@ def is_risk_score_below_threshold(
 
     Returns:
         bool: Flag to show if customer fails internal risk score assessment
+        customer_internal_risk_score: Risk score for customer
     """
 
     customer_internal_risk_score = float(customer_data_dct['NB36_risk_score'])
 
     result = True if customer_internal_risk_score < threshold_risk_score else False
 
-    return result
+    return result, customer_internal_risk_score
+
+
+def return_knockout_result(
+        customer_data_dct: dict
+        ) -> Tuple[str, dict]:
+    """
+    Helper function to return the knockout result as a consequence of if the other
+    tests have passed/failed. One True result, meaning they have failed will return a knockout result
+    of FAIL.
+
+    Args:
+         customer_data_dct: must contain the key 'flag_checks' with dictionary of key, value pairs
+         for keys ['has_delinquency_last_30_days', 'is_under_18', 'is_credit_score_fail', 'is_internal_risk_score_fail']
+
+    Returns:
+         str: Knockout outcome, one of 'ACCEPT' or 'REJECT'
+         dict: Returning the input customer_data_dct, with the knockout result filled in
+    """
+    flag_check_failure = [i for i, x in enumerate(customer_data_dct['flag_checks'].values()) if x]
+    if len(flag_check_failure) > 0:
+        customer_data_dct['knockout_result'] = 'REJECT'
+        for fail_num in flag_check_failure:
+            print(
+                f"Check for: {list(customer_data_dct['flag_checks'])[fail_num]} FAILED."
+                f"Value was {list(customer_data_dct['check_outcome'].values())[fail_num]}"
+                )
+    else:
+        customer_data_dct['knockout_result'] = 'ACCEPT'
+
+    if customer_data_dct['knockout_result'] == 'REJECT':
+        print(f"Customer ID: {customer_data_dct['application_id']} has FAILED the checks.")
+
+    return customer_data_dct['knockout_result'], customer_data_dct
+
+
+def return_credit_limit(
+        credit_score: float,
+        internal_risk_score: float
+        ) -> float:
+    """
+    Return credit limit according to risk bucketing logic
+
+    Args:
+        credit_score: Customer credit score
+        internal_risk_score: Customer internal risk score
+
+    Returns:
+        float: credit limit
+    """
+    credit_score_int = int(credit_score)
+    internal_risk_score_int = int(internal_risk_score)
+
+    # not the most elegant solution - didn't leave enough time to implement pd.cut()
+    limit = np.where(
+        (500 <= credit_score_int < 600) & (450 <= internal_risk_score_int < 500),
+        2000,
+        np.where(
+            (500 <= credit_score_int < 600) & (500 <= internal_risk_score_int < 600),
+            2500,
+            np.where(
+                (500 <= credit_score_int < 600) & (600 <= internal_risk_score_int < 700),
+                3000,
+                np.where(
+                    (600 <= credit_score_int < 700) & (450 <= internal_risk_score_int < 500),
+                    2500,
+                    np.where(
+                        (600 <= credit_score_int < 700) & (500 <= internal_risk_score_int < 600),
+                        3500,
+                        np.where(
+                            (600 <= credit_score_int < 700) & (600 <= internal_risk_score_int < 700),
+                            4500,
+                            np.where(
+                                (700 <= credit_score_int < 800) & (450 <= internal_risk_score_int < 500),
+                                3000,
+                                np.where(
+                                    (700 <= credit_score_int < 800) & (500 <= internal_risk_score_int < 600),
+                                    5000,
+                                    np.where(
+                                        (700 <= credit_score_int < 800) & (600 <= internal_risk_score_int < 700),
+                                        7000,
+                                        np.where(
+                                            (800 <= credit_score_int < 900) & (450 <= internal_risk_score_int < 500),
+                                            3500,
+                                            np.where(
+                                                (800 <= credit_score_int < 900) & (500 <= internal_risk_score_int < 600),
+                                                7000,
+                                                np.where(
+                                                    (800 <= credit_score_int < 900) & (600 <= internal_risk_score_int < 700),
+                                                    10000,
+                                                    np.nan
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+    if pd.isna(limit):
+        print(
+            f"Internal risk score: {internal_risk_score}, credit score: {credit_score} "
+            f"is out of bounds, no credit limit given"
+            )
+
+    if isinstance(limit, np.ndarray):
+        limit = limit.tolist()
+
+    return limit
 
 
 if __name__ == '__main___':
@@ -155,7 +272,7 @@ if __name__ == '__main___':
             "date_of_birth": {
                 "day": 23,
                 "month": 11,
-                "year": 1964
+                "year": 2006
                 }
             },
         "riskModel": [
@@ -284,19 +401,27 @@ if __name__ == '__main___':
         "NB36_risk_score": 600,
         }
 
-    # create a dict for the customer flag check results
+    # create a dict for the customer flag check outcome - True/False
+    customer_flag_check_outcome = {
+        'has_delinquency_last_30_days': None,
+        'is_under_18': None,
+        'is_credit_score_fail': None,
+        'is_internal_risk_score_fail': None,
+        }
+    # dict for the numerical values of the checks, e.g. risk score
     customer_flag_check_results = {
         'has_delinquency_last_30_days': None,
-        'age_less_than_18': None,
-        'credit_score_less_than_500': None,
-        'internal_risk_score_less_than_450': None,
+        'is_under_18': None,
+        'is_credit_score_fail': None,
+        'is_internal_risk_score_fail': None,
         }
 
     # create a dummy for customer data
     customer_data = example_payload
     customer_data['credit_bureau_report'] = credit_bureau_report_sample_one
     # add in the flag checks as to determine the knockout result
-    customer_data['flag_checks'] = customer_flag_check_results
+    customer_data['flag_checks'] = customer_flag_check_outcome
+    customer_data['check_outcome'] = customer_flag_check_results
     customer_data['knockout_result'] = None
     customer_data['limit'] = None
 
@@ -311,39 +436,55 @@ if __name__ == '__main___':
 
     # Rule 1: IF has_delinquency_last_30_days > 0 THEN FAIL
     # -------------
-    # convert the data to float to handle this flag
+    # convert the data to float
     customer_data['credit_bureau_report']['tradeline'] = convert_dict_dtype_to_float(
         input_data_dict=customer_data['credit_bureau_report']['tradeline'],
         columns_to_convert=tradeline_columns_to_convert_to_float
         )
 
-    delinquency_result = has_delinquency_last_30_days(
+    delinquency_result, num_delinq = has_delinquency_last_30_days(
         customer_data_dct=customer_data['credit_bureau_report']['tradeline']
         )
     customer_data['flag_checks']['has_delinquency_last_30_days'] = delinquency_result
+    customer_data['check_outcome']['has_delinquency_last_30_days'] = num_delinq
 
     # Rule 2: IF age < 18 THEN FAIL
     # -------------
     customer_identity_data = customer_data['credit_bureau_report']['consumerIdentity']
-    customer_age_check = is_under_18_years(customer_identity_data_dct=customer_identity_data)
-    customer_data['flag_checks']['age_less_than_18'] = customer_age_check
+    customer_age_check_result, customer_age = is_under_18_years(
+        customer_identity_data_dct=customer_identity_data
+        )
+    customer_data['flag_checks']['is_under_18'] = customer_age_check_result
+    customer_data['check_outcome']['is_under_18'] = customer_age
 
     # Rule 3: IF credit_score < 500 THEN FAIL
     # -------------
-    credit_score_result = has_failed_credit_score(
+    credit_score_result, credit_score = has_failed_credit_score(
         customer_data_risk_model_dct=customer_data['credit_bureau_report']['riskModel']
         )
-    customer_data['flag_checks']['credit_score_less_than_500'] = credit_score_result
-
+    customer_data['flag_checks']['is_credit_score_fail'] = credit_score_result
+    customer_data['check_outcome']['is_credit_score_fail'] = credit_score
 
     # Rule 4: IF internal_risk_score < 450 THEN FAIL
     # -------------
-    risk_score_result = is_risk_score_below_threshold(
+    risk_score_result, internal_risk_score = is_risk_score_below_threshold(
         customer_data_dct=customer_data
         )
-    customer_data['flag_checks']['internal_risk_score_less_than_450'] = risk_score_result
+    customer_data['flag_checks']['is_internal_risk_score_fail'] = risk_score_result
+    customer_data['check_outcome']['is_internal_risk_score_fail'] = internal_risk_score
 
     # Rule 5
     # -----------
     # If any of the above are False (for failed checks, then return reject), else
-    def return_
+    knockout_outcome, customer_dct = return_knockout_result(
+        customer_data_dct=customer_data
+        )
+
+    credit_score = 602
+    internal_risk_score = 525
+    import numpy as np
+
+return_credit_limit(credit_score=300, internal_risk_score=600)
+
+if knockout_outcome == 'ACCEPT':
+    customer_data
