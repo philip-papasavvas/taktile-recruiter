@@ -295,7 +295,7 @@ def run_customer_credit_check(
         ['application_id', 'credit_bureau_report', 'NB36_risk_score', 'flag_checks', 'check_outcome', 'knockout_result', 'limit']
 
     Returns:
-        float: Credit limit
+        dict: Return the customer data (as part of the decision flow defined in the problem)
     """
     customer_data = customer_data_dict
 
@@ -369,8 +369,11 @@ def run_customer_credit_check(
             )
     else:
         print(f"Customer: {customer_data['application_id']} was REJECTED")
+        credit_limit = np.nan
 
-    return credit_limit
+    customer_data['credit_limit'] = credit_limit
+
+    return customer_data
 
 
 if __name__ == '__main___':
