@@ -283,6 +283,94 @@ def add_extra_keys_to_customer_data_dct(
 
     return customer_data_dct
 
+def run_customer_credit_check(
+        customer_data_dict: dict
+        ) -> float:
+    """Function to wrap up all individual checks, including the rules defined,
+    and calculate the credit limit according to the customer information
+
+    Args:
+        customer_data_dict: Must include the keys:
+        ['application_id', 'credit_bureau_report', 'NB36_risk_score', 'flag_checks', 'check_outcome', 'knockout_result', 'limit']
+
+    Returns:
+        float: Credit limit
+    """
+    customer_data = customer_data_dict
+
+    assert customer_data['credit_bureau_report'], \
+        f"Credit bureau report doesn't exist, customer REJECTED, application ID:" \
+        f"{customer_data['application_id']}"
+
+    # add in the flag checks as to determine the knockout result
+    customer_data = add_extra_keys_to_customer_data_dct(customer_data_dct=customer_data)
+
+    # define parameters
+    tradeline_columns_to_convert_to_float = [
+        'amount1', 'amount2', 'balanceAmount', 'delinquencies30Days'
+        ]
+
+    # --------
+    # decision flow
+    # --------
+
+    # Rule 1: IF has_delinquency_last_30_days > 0 THEN FAIL
+    # -------------
+    # convert the data to float
+    customer_data['credit_bureau_report']['tradeline'] = convert_dict_dtype_to_float(
+        input_data_dict=customer_data['credit_bureau_report']['tradeline'],
+        columns_to_convert=tradeline_columns_to_convert_to_float
+        )
+
+    delinquency_result, num_delinq = has_delinquency_last_30_days(
+        customer_data_dct=customer_data['credit_bureau_report']['tradeline']
+        )
+    customer_data['flag_checks']['has_delinquency_last_30_days'] = delinquency_result
+    customer_data['check_outcome']['has_delinquency_last_30_days'] = num_delinq
+
+    # Rule 2: IF age < 18 THEN FAIL
+    # -------------
+    customer_identity_data = customer_data['credit_bureau_report']['consumerIdentity']
+    customer_age_check_result, customer_age = is_under_18_years(
+        customer_identity_data_dct=customer_identity_data
+        )
+    customer_data['flag_checks']['is_under_18'] = customer_age_check_result
+    customer_data['check_outcome']['is_under_18'] = customer_age
+
+    # Rule 3: IF credit_score < 500 THEN FAIL
+    # -------------
+    credit_score_result, credit_score = has_failed_credit_score(
+        customer_data_risk_model_dct=customer_data['credit_bureau_report']['riskModel']
+        )
+    customer_data['flag_checks']['is_credit_score_fail'] = credit_score_result
+    customer_data['check_outcome']['is_credit_score_fail'] = credit_score
+
+    # Rule 4: IF internal_risk_score < 450 THEN FAIL
+    # -------------
+    risk_score_result, internal_risk_score = is_risk_score_below_threshold(
+        customer_data_dct=customer_data
+        )
+    customer_data['flag_checks']['is_internal_risk_score_fail'] = risk_score_result
+    customer_data['check_outcome']['is_internal_risk_score_fail'] = internal_risk_score
+
+    # Rule 5
+    # -----------
+    # If any of the above are False (for failed checks, then return reject), else
+    knockout_outcome, customer_data = return_knockout_result(
+        customer_data_dct=customer_data
+        )
+
+    # final logic to return credit limit
+    if customer_data['knockout_result'] == 'ACCEPT':
+        credit_limit = return_credit_limit(
+            credit_score=customer_data['check_outcome']['is_credit_score_fail'],
+            internal_risk_score=customer_data['NB36_risk_score']
+            )
+    else:
+        print(f"Customer: {customer_data['application_id']} was REJECTED")
+
+    return credit_limit
+
 
 if __name__ == '__main___':
     # ----------
@@ -433,86 +521,6 @@ if __name__ == '__main___':
     customer_data = example_payload
     customer_data['credit_bureau_report'] = credit_bureau_report_sample_one
 
-    def run_customer_credit_check(
-            customer_data_dict: dict
-            ) -> float:
-        """Function to wrap up all individual checks, including the rules defined,
-        and calculate the credit limit according to the customer information
-
-        Args:
-            customer_data_dict: Must include the keys:
-            ['application_id', 'credit_bureau_report', 'NB36_risk_score', 'flag_checks', 'check_outcome', 'knockout_result', 'limit']
-
-        Returns:
-            float: Credit limit
-        """
-        assert customer_data_dict['credit_bureau_report'], \
-            f"Credit bureau report doesn't exist, customer REJECTED, application ID:" \
-            f"{customer_data_dict['application_id']}"
-
-    # add in the flag checks as to determine the knockout result
-    customer_data = add_extra_keys_to_customer_data_dct(customer_data_dct=customer_data)
-
-    # define parameters
-    tradeline_columns_to_convert_to_float = [
-        'amount1', 'amount2', 'balanceAmount', 'delinquencies30Days'
-        ]
-
-    # --------
-    # decision flow
-    # --------
-
-    # Rule 1: IF has_delinquency_last_30_days > 0 THEN FAIL
-    # -------------
-    # convert the data to float
-    customer_data['credit_bureau_report']['tradeline'] = convert_dict_dtype_to_float(
-        input_data_dict=customer_data['credit_bureau_report']['tradeline'],
-        columns_to_convert=tradeline_columns_to_convert_to_float
+    credit_limit = run_customer_credit_check(
+        customer_data_dict=customer_data
         )
-
-    delinquency_result, num_delinq = has_delinquency_last_30_days(
-        customer_data_dct=customer_data['credit_bureau_report']['tradeline']
-        )
-    customer_data['flag_checks']['has_delinquency_last_30_days'] = delinquency_result
-    customer_data['check_outcome']['has_delinquency_last_30_days'] = num_delinq
-
-    # Rule 2: IF age < 18 THEN FAIL
-    # -------------
-    customer_identity_data = customer_data['credit_bureau_report']['consumerIdentity']
-    customer_age_check_result, customer_age = is_under_18_years(
-        customer_identity_data_dct=customer_identity_data
-        )
-    customer_data['flag_checks']['is_under_18'] = customer_age_check_result
-    customer_data['check_outcome']['is_under_18'] = customer_age
-
-    # Rule 3: IF credit_score < 500 THEN FAIL
-    # -------------
-    credit_score_result, credit_score = has_failed_credit_score(
-        customer_data_risk_model_dct=customer_data['credit_bureau_report']['riskModel']
-        )
-    customer_data['flag_checks']['is_credit_score_fail'] = credit_score_result
-    customer_data['check_outcome']['is_credit_score_fail'] = credit_score
-
-    # Rule 4: IF internal_risk_score < 450 THEN FAIL
-    # -------------
-    risk_score_result, internal_risk_score = is_risk_score_below_threshold(
-        customer_data_dct=customer_data
-        )
-    customer_data['flag_checks']['is_internal_risk_score_fail'] = risk_score_result
-    customer_data['check_outcome']['is_internal_risk_score_fail'] = internal_risk_score
-
-    # Rule 5
-    # -----------
-    # If any of the above are False (for failed checks, then return reject), else
-    knockout_outcome, customer_data = return_knockout_result(
-        customer_data_dct=customer_data
-        )
-
-    # final logic to return credit limit
-    if customer_data['knockout_result'] == 'ACCEPT':
-        credit_limit = return_credit_limit(
-            credit_score=customer_data['check_outcome']['is_credit_score_fail'],
-            internal_risk_score=customer_data['NB36_risk_score']
-            )
-    else:
-        print(f"Customer: {customer_data['application_id']} was REJECTED")
