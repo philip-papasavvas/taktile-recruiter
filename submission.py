@@ -272,7 +272,7 @@ if __name__ == '__main___':
             "date_of_birth": {
                 "day": 23,
                 "month": 11,
-                "year": 2006
+                "year": 1964
                 }
             },
         "riskModel": [
