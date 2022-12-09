@@ -257,6 +257,33 @@ def return_credit_limit(
     return limit
 
 
+def add_extra_keys_to_customer_data_dct(
+        customer_data_dct: dict
+        ) -> dict:
+    """Helper function to add extra key, value pairs to customer data dict"""
+
+    # create a dict for the customer flag check outcome - True/False
+    customer_flag_check_outcome = {
+        'has_delinquency_last_30_days': None,
+        'is_under_18': None,
+        'is_credit_score_fail': None,
+        'is_internal_risk_score_fail': None,
+        }
+    # dict for the numerical values of the checks, e.g. risk score
+    customer_flag_check_results = {
+        'has_delinquency_last_30_days': None,
+        'is_under_18': None,
+        'is_credit_score_fail': None,
+        'is_internal_risk_score_fail': None,
+        }
+    customer_data_dct['flag_checks'] = customer_flag_check_outcome
+    customer_data_dct['check_outcome'] = customer_flag_check_results
+    customer_data_dct['knockout_result'] = None
+    customer_data_dct['limit'] = None
+
+    return customer_data_dct
+
+
 if __name__ == '__main___':
     # ----------
     # sample data
@@ -402,29 +429,29 @@ if __name__ == '__main___':
         "NB36_risk_score": 600,
         }
 
-    # create a dict for the customer flag check outcome - True/False
-    customer_flag_check_outcome = {
-        'has_delinquency_last_30_days': None,
-        'is_under_18': None,
-        'is_credit_score_fail': None,
-        'is_internal_risk_score_fail': None,
-        }
-    # dict for the numerical values of the checks, e.g. risk score
-    customer_flag_check_results = {
-        'has_delinquency_last_30_days': None,
-        'is_under_18': None,
-        'is_credit_score_fail': None,
-        'is_internal_risk_score_fail': None,
-        }
-
     # create a dummy for customer data
     customer_data = example_payload
     customer_data['credit_bureau_report'] = credit_bureau_report_sample_one
+
+    def run_customer_credit_check(
+            customer_data_dict: dict
+            ) -> float:
+        """Function to wrap up all individual checks, including the rules defined,
+        and calculate the credit limit according to the customer information
+
+        Args:
+            customer_data_dict: Must include the keys:
+            ['application_id', 'credit_bureau_report', 'NB36_risk_score', 'flag_checks', 'check_outcome', 'knockout_result', 'limit']
+
+        Returns:
+            float: Credit limit
+        """
+        assert customer_data_dict['credit_bureau_report'], \
+            f"Credit bureau report doesn't exist, customer REJECTED, application ID:" \
+            f"{customer_data_dict['application_id']}"
+
     # add in the flag checks as to determine the knockout result
-    customer_data['flag_checks'] = customer_flag_check_outcome
-    customer_data['check_outcome'] = customer_flag_check_results
-    customer_data['knockout_result'] = None
-    customer_data['limit'] = None
+    customer_data = add_extra_keys_to_customer_data_dct(customer_data_dct=customer_data)
 
     # define parameters
     tradeline_columns_to_convert_to_float = [
@@ -489,4 +516,3 @@ if __name__ == '__main___':
             )
     else:
         print(f"Customer: {customer_data['application_id']} was REJECTED")
-
