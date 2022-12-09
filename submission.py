@@ -14,6 +14,7 @@ from typing import List, Tuple
 
 # third party imports
 import pandas as pd
+import numpy as np
 
 pd.options.display.width = 1000
 pd.options.display.max_columns = 10
@@ -476,15 +477,16 @@ if __name__ == '__main___':
     # Rule 5
     # -----------
     # If any of the above are False (for failed checks, then return reject), else
-    knockout_outcome, customer_dct = return_knockout_result(
+    knockout_outcome, customer_data = return_knockout_result(
         customer_data_dct=customer_data
         )
 
-    credit_score = 602
-    internal_risk_score = 525
-    import numpy as np
+    # final logic to return credit limit
+    if customer_data['knockout_result'] == 'ACCEPT':
+        credit_limit = return_credit_limit(
+            credit_score=customer_data['check_outcome']['is_credit_score_fail'],
+            internal_risk_score=customer_data['NB36_risk_score']
+            )
+    else:
+        print(f"Customer: {customer_data['application_id']} was REJECTED")
 
-return_credit_limit(credit_score=300, internal_risk_score=600)
-
-if knockout_outcome == 'ACCEPT':
-    customer_data
