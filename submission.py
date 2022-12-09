@@ -543,5 +543,3 @@ if __name__ == '__main___':
     credit_limit_three = run_customer_credit_check(
         customer_data_dict=customer_data_three
         )
-
-
